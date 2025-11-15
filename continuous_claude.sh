@@ -112,15 +112,18 @@ wait_for_pr_checks() {
     local owner="$2"
     local repo="$3"
     local iteration_display="$4"
-    local max_iterations=30
+    local max_iterations=180  # 180 * 10 seconds = 30 minutes
     local iteration=0
 
     while [ $iteration -lt $max_iterations ]; do
+        echo "🔍 $iteration_display Checking PR status (iteration $((iteration + 1))/$max_iterations)..." >&2
+        
         local checks_json
         if ! checks_json=$(gh pr checks "$pr_number" --repo "$owner/$repo" --json state,bucket 2>&1); then
             # Check if the error is because there are no checks configured
             if echo "$checks_json" | grep -q "no checks"; then
                 echo "✅ $iteration_display No checks configured" >&2
+                return 0
             else
                 echo "⚠️  $iteration_display Failed to get PR checks status: $checks_json" >&2
                 return 1
@@ -130,8 +133,14 @@ wait_for_pr_checks() {
         local all_completed=true
         local all_success=true
         local check_count=$(echo "$checks_json" | jq 'length' 2>/dev/null || echo "0")
+        
+        echo "   📊 Found $check_count check(s)" >&2
 
         if [ "$check_count" -gt 0 ]; then
+            local pending_count=0
+            local success_count=0
+            local failed_count=0
+            
             local idx=0
             while [ $idx -lt $check_count ]; do
                 local state=$(echo "$checks_json" | jq -r ".[$idx].state")
@@ -140,17 +149,18 @@ wait_for_pr_checks() {
                 # Check if the check is still in progress (not completed)
                 if [ "$bucket" = "pending" ] || [ "$bucket" = "null" ]; then
                     all_completed=false
-                    break
-                fi
-
-                # Check if the check failed
-                if [ "$bucket" = "fail" ]; then
+                    pending_count=$((pending_count + 1))
+                elif [ "$bucket" = "fail" ]; then
                     all_success=false
-                    break
+                    failed_count=$((failed_count + 1))
+                else
+                    success_count=$((success_count + 1))
                 fi
 
                 idx=$((idx + 1))
             done
+            
+            echo "   ✓ Success: $success_count | ⏳ Pending: $pending_count | ✗ Failed: $failed_count" >&2
         fi
 
         # Check review status
@@ -168,17 +178,28 @@ wait_for_pr_checks() {
         if [ "$review_decision" = "REVIEW_REQUIRED" ] || [ "$review_requests_count" -gt 0 ]; then
             reviews_pending=true
         fi
+        
+        # Display review status
+        if [ "$review_decision" != "null" ]; then
+            echo "   👁️  Review status: $review_decision" >&2
+        elif [ "$review_requests_count" -gt 0 ]; then
+            echo "   👁️  Review status: $review_requests_count review(s) requested" >&2
+        else
+            echo "   👁️  Review status: No reviews required" >&2
+        fi
 
         # If we have checks that haven't started yet, wait (but only for a limited time)
         if [ "$check_count" -eq 0 ] && [ "$checks_json" != "" ] && [ "$checks_json" != "[]" ]; then
             # Only wait for checks if we haven't been waiting too long
-            if [ "$iteration" -lt 3 ]; then
-                echo "⏳ $iteration_display Waiting for checks to start..." >&2
-                sleep 60
+            if [ "$iteration" -lt 18 ]; then
+                echo "⏳ Waiting for checks to start... (will timeout after 3 minutes)" >&2
+                echo "" >&2
+                sleep 10
                 iteration=$((iteration + 1))
                 continue
             else
-                echo "✅ $iteration_display No checks found after waiting, proceeding" >&2
+                echo "✅ No checks found after waiting, proceeding without checks" >&2
+                return 0
             fi
         fi
 
@@ -202,11 +223,10 @@ wait_for_pr_checks() {
         fi
 
         # Still waiting for checks or reviews
-        local waiting_msg="⏳ $iteration_display Waiting for"
         local waiting_items=()
         
         if [ "$all_completed" = "false" ]; then
-            waiting_items+=("checks")
+            waiting_items+=("checks to complete")
         fi
         
         if [ "$reviews_pending" = "true" ]; then
@@ -214,11 +234,12 @@ wait_for_pr_checks() {
         fi
         
         if [ ${#waiting_items[@]} -gt 0 ]; then
-            waiting_msg="$waiting_msg ${waiting_items[*]} to complete... ($((iteration + 1))/$max_iterations)"
-            echo "$waiting_msg" >&2
+            echo "⏳ Waiting for: ${waiting_items[*]}" >&2
+            echo "   💤 Sleeping for 10 seconds before next check..." >&2
+            echo "" >&2
         fi
 
-        sleep 60
+        sleep 10
         iteration=$((iteration + 1))
     done
 
