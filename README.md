@@ -4,7 +4,7 @@ Automated workflow that orchestrates Claude Code in a continuous loop, autonomou
 
 ## ⚙️ How it works
 
-This script runs Claude Code in iterations until multi-step tasks are complete:
+This script automates the entire PR lifecycle—from code changes to merged commits—using Claude Code to drive iterative development:
 
 - Claude Code runs in a loop based on your prompt
 - All changes are committed to a new branch
