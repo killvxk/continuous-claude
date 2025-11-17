@@ -92,6 +92,34 @@ jobs:
             echo "should_release=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update version in script
+        if: steps.check_version.outputs.should_release == 'true'
+        run: |
+          NEW_VERSION="${{ steps.version_bump.outputs.new_version }}"
+
+          # Update version in continuous_claude.sh
+          sed -i 's/VERSION="dev"/VERSION="'"$NEW_VERSION"'"/' continuous_claude.sh
+
+          echo "✅ Updated version to $NEW_VERSION in continuous_claude.sh"
+
+      - name: Commit version bump
+        if: steps.check_version.outputs.should_release == 'true'
+        run: |
+          NEW_VERSION="${{ steps.version_bump.outputs.new_version }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage and commit changes
+          git add continuous_claude.sh
+          git commit -m ":bookmark: Release version $NEW_VERSION"
+
+          # Push to main
+          git push origin main
+
+          echo "✅ Committed and pushed version bump to main"
+
       - name: Generate release notes
         id: release_notes
         if: steps.check_version.outputs.should_release == 'true'

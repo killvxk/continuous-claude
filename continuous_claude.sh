@@ -1,5 +1,7 @@
 #!/bin/bash
 
+VERSION="dev"
+
 ADDITIONAL_FLAGS="--dangerously-skip-permissions --output-format json"
 
 NOTES_FILE="SHARED_TASK_NOTES.md"
@@ -65,6 +67,7 @@ REQUIRED OPTIONS:
 
 OPTIONAL FLAGS:
     -h, --help                    Show this help message
+    -v, --version                 Show version information
     --disable-commits             Disable automatic commits and PR creation
     --git-branch-prefix <prefix>  Branch prefix for iterations (default: "continuous-claude/")
     --merge-strategy <strategy>   PR merge strategy: squash, merge, or rebase (default: "squash")
@@ -94,11 +97,19 @@ For more information, visit: https://github.com/AnandChowdhary/continuous-claude
 EOF
 }
 
+show_version() {
+    echo "continuous-claude version $VERSION"
+}
+
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help)
                 show_help
+                exit 0
+                ;;
+            -v|--version)
+                show_version
                 exit 0
                 ;;
             -p|--prompt)
