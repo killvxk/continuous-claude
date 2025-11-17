@@ -97,8 +97,8 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.version_bump.outputs.new_version }}"
 
-          # Update version in continuous_claude.sh
-          sed -i 's/VERSION="dev"/VERSION="'"$NEW_VERSION"'"/' continuous_claude.sh
+          # Update version in continuous_claude.sh (replace any existing version)
+          sed -i 's/^VERSION=".*"/VERSION="'"$NEW_VERSION"'"/' continuous_claude.sh
 
           echo "✅ Updated version to $NEW_VERSION in continuous_claude.sh"
 
