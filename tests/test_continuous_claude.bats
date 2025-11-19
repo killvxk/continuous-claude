@@ -102,3 +102,137 @@ setup() {
     # We can't easily check stdout here because main_loop output might be captured or redirected
     # But success means it didn't crash
 }
+
+@test "validate_requirements fails when claude is missing" {
+    # Mock command to fail for claude
+    function command() {
+        if [ "$2" == "claude" ]; then
+            return 1
+        fi
+        return 0
+    }
+    export -f command
+    
+    source "$SCRIPT_PATH"
+    run validate_requirements
+    
+    assert_failure
+    assert_output --partial "Error: Claude Code is not installed"
+}
+
+@test "validate_requirements fails when jq is missing" {
+    # Mock command to fail for jq, pass for claude
+    function command() {
+        if [ "$2" == "jq" ]; then
+            return 1
+        fi
+        return 0
+    }
+    # Mock claude to simulate installation failure
+    function claude() {
+        return 0
+    }
+    export -f command claude
+    
+    source "$SCRIPT_PATH"
+    run validate_requirements
+    
+    assert_failure
+    assert_output --partial "jq is required for JSON parsing"
+}
+
+@test "validate_requirements fails when gh is missing and commits enabled" {
+    # Mock command to fail for gh
+    function command() {
+        if [ "$2" == "gh" ]; then
+            return 1
+        fi
+        return 0
+    }
+    export -f command
+    
+    source "$SCRIPT_PATH"
+    ENABLE_COMMITS="true"
+    run validate_requirements
+    
+    assert_failure
+    assert_output --partial "Error: GitHub CLI (gh) is not installed"
+}
+
+@test "validate_requirements passes when gh is missing but commits disabled" {
+    # Mock command to fail for gh
+    function command() {
+        if [ "$2" == "gh" ]; then
+            return 1
+        fi
+        return 0
+    }
+    export -f command
+    
+    source "$SCRIPT_PATH"
+    ENABLE_COMMITS="false"
+    run validate_requirements
+    
+    assert_success
+}
+
+@test "get_iteration_display formats with max runs" {
+    source "$SCRIPT_PATH"
+    run get_iteration_display 1 5 0
+    assert_output "(1/5)"
+    
+    run get_iteration_display 2 5 1
+    assert_output "(2/6)"
+}
+
+@test "get_iteration_display formats without max runs" {
+    source "$SCRIPT_PATH"
+    run get_iteration_display 1 0 0
+    assert_output "(1)"
+}
+
+@test "parse_claude_result handles valid success JSON" {
+    source "$SCRIPT_PATH"
+    run parse_claude_result '{"result": "success", "total_cost_usd": 0.1}'
+    assert_success
+    assert_output "success"
+}
+
+@test "parse_claude_result handles invalid JSON" {
+    source "$SCRIPT_PATH"
+    run parse_claude_result 'invalid json'
+    assert_failure
+    assert_output "invalid_json"
+}
+
+@test "parse_claude_result handles Claude error JSON" {
+    source "$SCRIPT_PATH"
+    run parse_claude_result '{"is_error": true, "result": "error message"}'
+    assert_failure
+    assert_output "claude_error"
+}
+
+@test "create_iteration_branch generates correct branch name" {
+    source "$SCRIPT_PATH"
+    GIT_BRANCH_PREFIX="test-prefix/"
+    DRY_RUN="true"
+    
+    # Mock date to return fixed value
+    function date() {
+        if [ "$1" == "+%Y-%m-%d" ]; then
+            echo "2024-01-01"
+        else
+            echo "12345678"
+        fi
+    }
+    # Mock openssl for random hash
+    function openssl() {
+        echo "abcdef12"
+    }
+    export -f date openssl
+    
+    run create_iteration_branch "(1/5)" 1
+    
+    assert_success
+    assert_output --partial "test-prefix/iteration-1/2024-01-01-abcdef12"
+}
