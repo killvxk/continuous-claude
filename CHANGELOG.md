@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [v0.8.4] - 2025-11-20
+
+### What's Changed
+
+- :green_heart: Update release workflow to fetch latest production tag (4d11b42)
+- :construction_worker: Add workflow_dispatch trigger to release workflow (bcbcc39)
+- :bug: Improve error handling and logging (43886f6)
+- :art: Refactor test workflow for consistency (8a219b1)
+
+**Full Changelog**: https://github.com/AnandChowdhary/continuous-claude/compare/v0.8.3...v0.8.4
+
+### Installation
+
+Install with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnandChowdhary/continuous-claude/refs/tags/v0.8.4/install.sh | bash
+```
+
+Or download the script directly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnandChowdhary/continuous-claude/refs/tags/v0.8.4/continuous_claude.sh -o continuous-claude
+chmod +x continuous-claude
+sudo mv continuous-claude /usr/local/bin/
+```
+
 ## [v0.8.3] - 2025-11-20
 
 ### What's Changed
