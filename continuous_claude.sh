@@ -891,7 +891,7 @@ run_claude_iteration() {
         # If stderr is empty, try to extract error from JSON stdout
         if [ ! -s "$error_log" ] && [ -f "$temp_stdout" ] && [ -s "$temp_stdout" ]; then
             # Check if stdout contains JSON with error info
-            local json_error=$(cat "$temp_stdout" | jq -r 'if .is_error == true then .result // .error // "Unknown error" else empty end' 2>/dev/null || echo "")
+            local json_error=$(cat "$temp_stdout" | jq -r 'if type == "array" then .[-1] else . end | if .is_error == true then .result // .error // "Unknown error" else empty end' 2>/dev/null || echo "")
             if [ -n "$json_error" ]; then
                 echo "$json_error" > "$error_log"
                 echo "$json_error" >&2
@@ -932,7 +932,7 @@ parse_claude_result() {
         return 1
     fi
     
-    local is_error=$(echo "$result" | jq -r '.is_error // false')
+    local is_error=$(echo "$result" | jq -r 'if type == "array" then .[-1].is_error // false else .is_error // false end')
     if [ "$is_error" = "true" ]; then
         echo "claude_error"
         return 1
@@ -975,7 +975,7 @@ handle_iteration_error() {
             echo "" >&2
             echo "❌ $iteration_display Error in Claude Code response ($error_count consecutive errors):" >&2
             echo "" >&2
-            echo "$error_output" | jq -r '.result // .' >&2
+            echo "$error_output" | jq -r 'if type == "array" then .[-1].result // .[-1] else .result // . end' >&2
             echo "" >&2
             ;;
     esac
@@ -995,7 +995,7 @@ handle_iteration_success() {
     local main_branch="$4"
     
     echo "📝 $iteration_display Output:" >&2
-    local result_text=$(echo "$result" | jq -r '.result // empty')
+    local result_text=$(echo "$result" | jq -r 'if type == "array" then .[-1].result // empty else .result // empty end')
     if [ -n "$result_text" ]; then
         echo "$result_text"
     else
@@ -1015,7 +1015,7 @@ handle_iteration_success() {
         completion_signal_count=0
     fi
 
-    local cost=$(echo "$result" | jq -r '.total_cost_usd // empty')
+    local cost=$(echo "$result" | jq -r 'if type == "array" then .[-1].total_cost_usd // empty else .total_cost_usd // empty end')
     if [ -n "$cost" ]; then
         echo "" >&2
         printf "💰 $iteration_display Cost: \$%.3f\n" "$cost" >&2
