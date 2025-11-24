@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [v0.9.1] - 2025-11-24
+
+### What's Changed
+
+- :bug: Handle Claude Code array output format (#24) (bdf9261)
+
+**Full Changelog**: https://github.com/AnandChowdhary/continuous-claude/compare/v0.9.0...v0.9.1
+
+### Installation
+
+Install with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnandChowdhary/continuous-claude/refs/tags/v0.9.1/install.sh | bash
+```
+
+Or download the script directly:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnandChowdhary/continuous-claude/refs/tags/v0.9.1/continuous_claude.sh -o continuous-claude
+chmod +x continuous-claude
+sudo mv continuous-claude /usr/local/bin/
+```
+
 ## [v0.9.0] - 2025-11-21
 
 ### What's Changed
